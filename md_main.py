@@ -95,7 +95,7 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
 
 # --------------------------------------
 # UPDATES POSITIONS, VELOCITIES AND ACCELERATIONS USING VELOCITY 
-# VERLET ALGORITHM
+# VERLET ALGORITHM *** CURRENTLY USING VERLET ALGORITHM
 # -------------------------------------
 def update (p_no, d_no, coords, vel, f, acc, dt, step):
     if step < 2:
@@ -129,37 +129,15 @@ def compute (p_no, d_no, coords, vel, step):
     
     if step < 2:
         print('BEGINNING COMPUTE')
-    pi_d15 = 3.141592653589793
     
     # ZERO MATRICES
     force  = np.zeros([d_no, p_no])
-    rij    = np.zeros(d_no) # SHAPE (3,) 
 
-    potential = 0.0
-
-    # COMPUTE ENERGY AND FORCES
-    for i in range (0, p_no):
-        # ALL PARTICLES j WITH PARTICLE i 
-        for j in range(0, p_no):
-            if (i != j): # IF i DOES NOT EQUAL j
-                # COMPUTE Rij = DISPLACEMENT VECTOR - DIFFERENT IN X,Y,Z
-                for k in range (0, d_no):
-                    # ADDING TO rij [3,1] ONLY USED TO FIND d
-                    rij[k] = float(coords[k][i]) - float(coords[k][j])
-                
-                # COMPUTE DISTANCE (d) AND TRUNCATED DISTANCE (d2)
-                d = 0.0
-                for k in range(0, d_no):
-                    d = d + rij[k] ** 2
-                # sqrt(d) = sqrt(X**2 + Y**2 + Z**2) = DISTANCE BETWEEN
-                d = sqrt(d)
-                d2 = min(d, pi_d15/2) # WILL RETURN WHICH EVER IS SMALLER
-                # GIVE HALF OF THE POTENTIAL ENERGY TO PARTICLE j
-                potential = potential + 0.5 * sin(d) * sin(d2)
-                # ADD PARTICLE j'S CONTRIBUTION TO THE FORCE ON i
-                for k in range(0, d_no):
-                    # ADDING TO MATRIX force 
-                    force[k,i] = force[k,i] - rij[k] * sin(2.0 * d2) / d
+    # NEED TO CALL FUNCTION TO SUBMIT SPEC ***
+    
+    # READ IN FORCE DATA TO USE AS POTENTIAL ***
+    
+    # CONVERT FORCE TO POTENTIAL ***
 
     # COMPUTE KINETIC ENERGY
     kinetic = 0.0
