@@ -69,7 +69,7 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
         coords = update_pos (p_no, d_no, coords, vel, force, acc, dt)
         
         # CALCULATE FORCE, POTENTIAL AND KINETIC ENERGIES USING compute()
-        force = compute (p_no, d_no, coords, vel, dt)
+        force = compute (p_no, d_no, coords, vel, dt, original_f)
         
         # UPDATE POSITION USING update_vel()
         vel, acc, kinetic = update_vel (p_no, d_no, coords, vel, force, acc, dt)
@@ -111,7 +111,7 @@ def update_pos (p_no, d_no, coords, vel, acc, dt):
 # -------------------------------------
 # FUNCTION COMPUTES FORCES AND ENERGIES
 # -------------------------------------
-def compute (p_no, d_no, coords, vel, dt, step):
+def compute (p_no, d_no, coords, vel, dt, step, original_f):
     import numpy as np
     from math import sin, sqrt
     
@@ -122,14 +122,29 @@ def compute (p_no, d_no, coords, vel, dt, step):
     force  = np.zeros([d_no, p_no])
 
     # SUBMIT SPEC 
-    os.mkdir("step_" + step)
-    lines_job = [""]
-    lines_inp = [""]
+    os.mkdir("gamess_sub/step_" + step)
+    
+    # SAVE ALL TEXT EXCEPT COORDS IN xyz
+    save_coords = True
+    inp         = []
+    for line in original_f:
+        if save_coords:
+            line = line.split()
+            inp.append([line[0], line[1])    
+        if re.search('FMOXYZ', line):
+            save_coords = False
+            
+    # ADD NEW COORDS TO xyz
+    for i in range(0, d_no):
+        for j in range(0, p_no):
+            inp[j].append = coords[i][j]
+        
+    lines_job = [""] # *******
+    
     with open("gamess_sub/step_" + step + "/.inp", 'w+') as f:
-        f.writelines(lines_inp)
+        f.writelines(inp)
     with open("gamess_sub/step_" + step + "/.job", 'w+') as f:
         f.writeline(lines_job)
-    
     
     
     # READ IN FORCE DATA TO USE AS POTENTIAL ***
