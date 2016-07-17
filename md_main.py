@@ -5,7 +5,7 @@
 # --------------------------
 # PRODUCES ENERGIES AND PRINTS
 # --------------------------
-def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
+def md (original_f, coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
     import numpy as np
     import sys
 
@@ -63,7 +63,7 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
             acc = np.zeros([d_no, p_no])
             
         # CALCULATE FORCE, POTENTIAL AND KINETIC ENERGIES USING compute()
-        force, potential, kinetic = compute (p_no, d_no, coords, vel, dt)
+        force, potential, kinetic = compute (p_no, d_no, coords, vel, dt, original_f)
 
         # UPDATE POSITION, VELOCITY, ACCELERATION USING update()
         coords, vel, acc = update (p_no, d_no, coords, vel, force, acc, dt)
@@ -89,7 +89,7 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
 # -------------------------------------
 # FUNCTION COMPUTES FORCES AND ENERGIES
 # -------------------------------------
-def compute (p_no, d_no, coords, vel, dt):
+def compute (p_no, d_no, coords, vel, dt, original_f):
     import numpy as np
     from math import sin, sqrt
     
@@ -169,13 +169,13 @@ def md_test ():
     from time import clock 
     t_stamp()
     # COORDS: LIST OF LISTS; SYMBOL, CHARGE, X, Y, Z, MASS 
-    coords = xyz()
+    original_f, coords = xyz()
     s_no = 100
     dt   = 0.1
     temp = 300
     wtime1 = clock()
     # THE MD SIMULATION 
-    md(coords, s_no, dt, temp)
+    md(original_f, coords, s_no, dt, temp)
     wtime2 = clock()
     print('Simulation human time = ', wtime2 - wtime1)
     # TERMINATION
