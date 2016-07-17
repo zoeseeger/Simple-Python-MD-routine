@@ -10,8 +10,8 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
     import sys
 
     sys = sys.version.split()
-    d_no = 3                            # FOR X, Y AND Z
-    p_no = len(coords[0])               # TO ITERATE THROUGH ATOMS
+    d_no = 3                            # FOR X, Y AND Z, ROWS IN MATRIX
+    p_no = len(coords[0])               # TO ITERATE THROUGH ATOMS, COLUMNS IN MATRIX
     
     # STARTING PARAMS
     print('')
@@ -37,17 +37,17 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
             # INITIATION
             # --------------            
             # RANDOM DISTR. VELOCITES ABOUT 0
-            mu, sigma = 0, 0.01          # CONSIDER SIGMA MORE CAREFULLY
+            mu, sigma = 0, 0.01          # CONSIDER SIGMA MORE CAREFULLY ***
             vel = np.random.normal(mu, sigma, size=(d_no, p_no))
             for row in vel:
                 sum_velocity = 0
                 for val in row:
                     sum_velocity = sum_velocity + val
-                if sum_velocity > 0.2:  # CONSIDER CUTOFF MORE CAREFULLY, WHAT IS TOO LARGE?
+                if sum_velocity > 0.2:  # CONSIDER CUTOFF MORE CAREFULLY, WHAT IS TOO LARGE? ***
                     print("SUM OF VELOCITIES ",sum_velocity, " TOO LARGE")
 
             # TEMPERATURE FROM VELOCITY MEAN SQUARED
-            # NOT SURE ABOUT MATHS TO FIND active_temp
+            # NOT SURE ABOUT MATHS TO FIND active_temp ***
             for i in d_no:
                 for j in p_no:
                     active_temp = vel[i][j] ** 2 * coords[5][j] # T = m*v^2 / Nf * k_B
@@ -58,23 +58,17 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
             for i in d_no:
                 for j in p_no:
                     vel[i,j] = vel[i,j] * scale_temp
-            # VELOCITIES USED TO FIND PREVIOUS POSITIONS
-            pos_prev = np.zeros([d_no, p_no)]
-            for i in d_no:
-                for j in p_no:
-                    pos_prev[i,j] = coords[i][j] - vel[i,j] * dt
 
             # EMPTY ACCELERATIONS
             acc = np.zeros([d_no, p_no])
-
-        else:
-            # AFTER FIRST STEP UPDATE POSITION, VELOCITY, ACCELERATION USING update()
-            coords, vel, acc = update (p_no, d_no, coords, vel, force, acc, dt, step)
-        
+            
         # CALCULATE FORCE, POTENTIAL AND KINETIC ENERGIES USING compute()
-        force, potential, kinetic = compute (p_no, d_no, coords, vel, step)
+        force, potential, kinetic = compute (p_no, d_no, coords, vel, dt)
 
-        # INITIAL ENERGY e0 CALCULATED
+        # UPDATE POSITION, VELOCITY, ACCELERATION USING update()
+        coords, vel, acc = update (p_no, d_no, coords, vel, force, acc, dt)
+
+        # INITIAL ENERGY e0 CALCULATED FOR ERROR CALC
         if (step == 0):
             e0 = potential + kinetic
 
@@ -92,38 +86,10 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
             print('     %8d  %14f  %14f  %14g' % ( step, potential, kinetic, rel ))
     return
 
-
-# --------------------------------------
-# UPDATES POSITIONS, VELOCITIES AND ACCELERATIONS USING VELOCITY 
-# VERLET ALGORITHM *** CURRENTLY USING VERLET ALGORITHM
-# -------------------------------------
-def update (p_no, d_no, coords, vel, f, acc, dt, step):
-    if step < 2:
-        print("BEGINNING UPDATE")    
-
-    # UPDATE POSITIONS
-    for i in range(0, d_no):
-        for j in range(0, p_no):
-            coords[i][j] = float(coords[i][j]) + vel[i,j] * dt + 0.5 * acc[i,j] * dt * dt
-    
-    # UPDATE VELOCITIES
-    for i in range(0, d_no):
-        for j in range(0, p_no):
-            rmass = 1/coords[5][j]
-            vel[i,j] = vel[i,j] + 0.5 * dt * (f[i,j] * rmass + acc[i,j])
-    
-    # UPDATE ACCELERATIONS
-    for i in range(0, d_no):
-        for j in range(0, p_no):
-            rmass = 1/coords[5][j]
-            acc[i,j] = f[i,j] * rmass
-
-    return coords, vel, acc
-
 # -------------------------------------
 # FUNCTION COMPUTES FORCES AND ENERGIES
 # -------------------------------------
-def compute (p_no, d_no, coords, vel, step):
+def compute (p_no, d_no, coords, vel, dt):
     import numpy as np
     from math import sin, sqrt
     
@@ -137,16 +103,54 @@ def compute (p_no, d_no, coords, vel, step):
     
     # READ IN FORCE DATA TO USE AS POTENTIAL ***
     
-    # CONVERT FORCE TO POTENTIAL ***
-
+    # PULL FORCE/POTENTIAL ENERGY FOR ENERGY OF STEP ***
+    # fx(r) = -dU(r)/dx        (partial derivative)
+    # fx(r) = -(x/r)(dU(r)/dr) (partial derivative)
+    
     # COMPUTE KINETIC ENERGY
+    # USED TO FIND TOTAL ENERGY (+ POTENTIAL) AND FIND % ERROR IN CALC
     kinetic = 0.0
     for k in range(0, d_no):
         for j in range(0, p_no):
             # COORDS[5] = ATOMIC MASSES
+            # 1/2 * m * v^2
             kinetic = kinetic + 0.5 * coords[5][j] * vel[k,j] ** 2
     
     return force, potential, kinetic
+    
+# --------------------------------------
+# UPDATES POSITIONS, VELOCITIES AND ACCELERATIONS USING VELOCITY 
+# VERLET ALGORITHM - In this algorithm, we can compute the new 
+# velocities only after we have computed the new positions and, 
+# from these, the new forces. 
+# -------------------------------------
+def update (p_no, d_no, coords, vel, f, acc, dt):
+    if step < 2:
+        print("BEGINNING UPDATE")    
+
+    # UPDATE POSITIONS
+    for i in range(0, d_no):
+        for j in range(0, p_no):
+            # VELOCITY VERLET; TAYLOR SERIES EXPANSION FOR COORDS
+            # r(t+dt) = r(t) + v(t)*dt + 1/2 * force(t)/mass * dt**2 
+            # f(t) = a(t)/mass & f(t+dt) = force 
+            coords[i][j] = float(coords[i][j]) + vel[i,j] * dt + 0.5 * acc[i,j] * dt * dt
+    
+    # UPDATE VELOCITIES - VELOCITY VERLET TAYLOR SERIES EXPANSION FOR VELOCITIES
+    # v(t+dt) = v(t) + (force(t) + force(t+dt)) * 1/2 * 1/mass * dt 
+    for i in range(0, d_no):
+        for j in range(0, p_no):
+            rmass = 1/coords[5][j]
+            vel[i,j] = vel[i,j] + 0.5 * dt * (f[i,j] * rmass + acc[i,j])
+    
+    # UPDATE ACCELERATIONS
+    for i in range(0, d_no):
+        for j in range(0, p_no):
+            rmass = 1/coords[5][j]
+            # f = ma
+            acc[i,j] = f[i,j] * rmass
+
+    return coords, vel, acc
 
 # ------------------------
 # TIME STAMP - NO PARAMS
