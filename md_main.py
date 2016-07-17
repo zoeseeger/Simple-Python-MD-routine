@@ -61,13 +61,16 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
 
             # EMPTY ACCELERATIONS
             acc = np.zeros([d_no, p_no])
-            
+
+        # UPDATE POSITION USING update_pos()
+        coords = update_pos (p_no, d_no, coords, vel, force, acc, dt)
+        
         # CALCULATE FORCE, POTENTIAL AND KINETIC ENERGIES USING compute()
-        force, potential, kinetic = compute (p_no, d_no, coords, vel, dt)
-
-        # UPDATE POSITION, VELOCITY, ACCELERATION USING update()
-        coords, vel, acc = update (p_no, d_no, coords, vel, force, acc, dt)
-
+        force = compute (p_no, d_no, coords, vel, dt)
+        
+        # UPDATE POSITION USING update_vel()
+        vel, acc, kinetic = update_vel (p_no, d_no, coords, vel, force, acc, dt)
+        
         # INITIAL ENERGY e0 CALCULATED FOR ERROR CALC
         if (step == 0):
             e0 = potential + kinetic
@@ -85,6 +88,22 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
         if (step == s_no):
             print('     %8d  %14f  %14f  %14g' % ( step, potential, kinetic, rel ))
     return
+
+# -------------------------------------
+# UPDATE POSITIONS
+# -------------------------------------
+def update_pos (p_no, d_no, coords, vel, acc, dt):
+    if step < 2:
+        print("BEGINNING UPDATE_POSITIONS")    
+
+    # UPDATE POSITIONS
+    for i in range(0, d_no):
+        for j in range(0, p_no):
+            # VELOCITY VERLET; TAYLOR SERIES EXPANSION FOR COORDS
+            # r(t+dt) = r(t) + v(t)*dt + 1/2 * force(t)/mass * dt**2 
+            # f(t) = a(t)/mass & f(t+dt) = force 
+            coords[i][j] = float(coords[i][j]) + vel[i,j] * dt + 0.5 * acc[i,j] * dt * dt
+    return coords
 
 # -------------------------------------
 # FUNCTION COMPUTES FORCES AND ENERGIES
@@ -107,34 +126,14 @@ def compute (p_no, d_no, coords, vel, dt):
     # fx(r) = -dU(r)/dx        (partial derivative)
     # fx(r) = -(x/r)(dU(r)/dr) (partial derivative)
     
-    # COMPUTE KINETIC ENERGY
-    # USED TO FIND TOTAL ENERGY (+ POTENTIAL) AND FIND % ERROR IN CALC
-    kinetic = 0.0
-    for k in range(0, d_no):
-        for j in range(0, p_no):
-            # COORDS[5] = ATOMIC MASSES
-            # 1/2 * m * v^2
-            kinetic = kinetic + 0.5 * coords[5][j] * vel[k,j] ** 2
-    
-    return force, potential, kinetic
+    return force
     
 # --------------------------------------
-# UPDATES POSITIONS, VELOCITIES AND ACCELERATIONS USING VELOCITY 
-# VERLET ALGORITHM - In this algorithm, we can compute the new 
-# velocities only after we have computed the new positions and, 
-# from these, the new forces. 
+# UPDATES VELOCITIES/ACC USING VELOCITY VERLET
 # -------------------------------------
-def update (p_no, d_no, coords, vel, f, acc, dt):
+def update_vel (p_no, d_no, coords, vel, force, acc, dt):
     if step < 2:
-        print("BEGINNING UPDATE")    
-
-    # UPDATE POSITIONS
-    for i in range(0, d_no):
-        for j in range(0, p_no):
-            # VELOCITY VERLET; TAYLOR SERIES EXPANSION FOR COORDS
-            # r(t+dt) = r(t) + v(t)*dt + 1/2 * force(t)/mass * dt**2 
-            # f(t) = a(t)/mass & f(t+dt) = force 
-            coords[i][j] = float(coords[i][j]) + vel[i,j] * dt + 0.5 * acc[i,j] * dt * dt
+        print("BEGINNING UPDATE_VEL")    
     
     # UPDATE VELOCITIES - VELOCITY VERLET TAYLOR SERIES EXPANSION FOR VELOCITIES
     # v(t+dt) = v(t) + (force(t) + force(t+dt)) * 1/2 * 1/mass * dt 
@@ -149,8 +148,19 @@ def update (p_no, d_no, coords, vel, f, acc, dt):
             rmass = 1/coords[5][j]
             # f = ma
             acc[i,j] = f[i,j] * rmass
+            
+    
+            
+    # COMPUTE KINETIC ENERGY
+    # USED TO FIND TOTAL ENERGY (+ POTENTIAL) AND FIND % ERROR IN CALC
+    kinetic = 0.0
+    for k in range(0, d_no):
+        for j in range(0, p_no):
+            # COORDS[5] = ATOMIC MASSES
+            # 1/2 * m * v^2
+            kinetic = kinetic + 0.5 * coords[5][j] * vel[k,j] ** 2
 
-    return coords, vel, acc
+    return vel, acc, kinetic
 
 # ------------------------
 # TIME STAMP - NO PARAMS
