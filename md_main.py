@@ -1,29 +1,31 @@
 #!/short/k96/zls565/installations/bin/python3
 # USING PYTHON/3.4.3
-# SEE: https://people.sc.fsu.edu/~jburkardt/py_src/md/md.py
+# SOURCE: https://people.sc.fsu.edu/~jburkardt/py_src/md/md.py
+# SOURCE: Frenkel, Smit, Understanding Molecular Simulation: From Algorithms to Applications
 
 # --------------------------
 # PRODUCES ENERGIES AND PRINTS
 # --------------------------
 def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
     import numpy as np
+    import math
     import sys
 
-    sys = sys.version.split()
+    sys  = sys.version.split()
     d_no = 3                            # FOR X, Y AND Z, ROWS IN MATRIX
     p_no = len(coords[0])               # TO ITERATE THROUGH ATOMS, COLUMNS IN MATRIX
     
     # STARTING PARAMS
-    print('')
-    print('     Molecular Dynamics Simulator'                           )
-#    print('     Written by Zoe Seeger, 2016'                            )
-    print('     This programme is using Python version ' + sys[0]        )
-    print('     With: '                                                 )
-    print('         Spatial dimension   : ' , d_no                      )
-    print('         Number of particles : ' , p_no                      )
-    print('         Number of steps     : ' , s_no                      )
-    print('         Time step (seconds) : ' , dt                        )
-    print('')
+    print(''                                                                   ) 
+    print('     Molecular Dynamics Simulator'                                  )
+    print('     Written by Zoe Seeger, 2016'                                   )
+    print('     This programme is using Python version ' + sys[0]              )
+    print('     With: '                                                        )
+    print('         Spatial dimension   : ' , d_no                             )
+    print('         Number of particles : ' , p_no                             )
+    print('         Number of steps     : ' , s_no                             )
+    print('         Time step (seconds) : ' , dt                               )
+    print(''                                                                   )
     print('     Step        Potential           Kinetic         Relative Error')
     print('     --------------------------------------------------------------')
 
@@ -48,15 +50,17 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
 
             # TEMPERATURE FROM VELOCITY MEAN SQUARED
             # NOT SURE ABOUT MATHS TO FIND active_temp ***
-            for i in d_no:
-                for j in p_no:
-                    active_temp = vel[i][j] ** 2 * coords[5][j] # T = m*v^2 / Nf * k_B
+            active_temp = 0
+            for i in range(0, d_no):
+                for j in range(0, p_no):
+                    # T = m*v^2 / Nf * k_B ~ IS THIS CORRECT?
+                    active_temp = active_temp + vel[i,j] ** 2 * coords[4][j] 
             # TIMESAVING?
             active_temp = active_temp / (3 * p_no * 1.38064852e-23) # Nf ~ 3N
             # SCALING FACTOR OF OLD TEMP -> NEW TEMP FOR VELOCITIES 
-            scale_temp  = sqrt(temp/active_temp) 
-            for i in d_no:
-                for j in p_no:
+            scale_temp  = math.sqrt(temp/active_temp) 
+            for i in range(0, d_no):
+                for j in range(0, p_no):
                     vel[i,j] = vel[i,j] * scale_temp
 
             # EMPTY ACCELERATIONS
@@ -66,13 +70,13 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
             os.mkdir("gamess_sub")
 
         # UPDATE POSITION USING update_pos()
-        coords = update_pos (p_no, d_no, coords, vel, force, acc, dt)
+        coords = update_pos (p_no, d_no, coords, vel, acc, dt, step)
         
         # CALCULATE FORCE, POTENTIAL AND KINETIC ENERGIES USING compute()
-        force = compute (p_no, d_no, coords, vel, dt, original_f)
+        force, potential = compute (p_no, d_no, coords, vel, dt, step, original_f)
         
         # UPDATE POSITION USING update_vel()
-        vel, acc, kinetic = update_vel (p_no, d_no, coords, vel, force, acc, dt)
+        vel, acc, kinetic = update_vel (p_no, d_no, coords, vel, force, acc, dt, step)
         
         # INITIAL ENERGY e0 CALCULATED FOR ERROR CALC
         if (step == 0):
@@ -95,7 +99,7 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
 # -------------------------------------
 # UPDATE POSITIONS
 # -------------------------------------
-def update_pos (p_no, d_no, coords, vel, acc, dt):
+def update_pos (p_no, d_no, coords, vel, acc, dt, step):
     if step < 2:
         print("BEGINNING UPDATE_POSITIONS")    
 
@@ -106,6 +110,7 @@ def update_pos (p_no, d_no, coords, vel, acc, dt):
             # r(t+dt) = r(t) + v(t)*dt + 1/2 * force(t)/mass * dt**2 
             # f(t) = a(t)/mass & f(t+dt) = force 
             coords[i][j] = float(coords[i][j]) + vel[i,j] * dt + 0.5 * acc[i,j] * dt * dt
+            
     return coords
 
 # -------------------------------------
@@ -113,7 +118,6 @@ def update_pos (p_no, d_no, coords, vel, acc, dt):
 # -------------------------------------
 def compute (p_no, d_no, coords, vel, dt, step, original_f):
     import numpy as np
-    from math import sin, sqrt
     
     if step < 2:
         print('BEGINNING COMPUTE')
@@ -137,7 +141,7 @@ def compute (p_no, d_no, coords, vel, dt, step, original_f):
     # ADD NEW COORDS TO xyz
     for i in range(0, d_no):
         for j in range(0, p_no):
-            inp[j].append = coords[i][j]
+            inp[j].append = float(coords[i][j])
         
     lines_job = [""] # *******
     
@@ -148,44 +152,44 @@ def compute (p_no, d_no, coords, vel, dt, step, original_f):
     
     
     # READ IN FORCE DATA TO USE AS POTENTIAL ***
+    potential = 0
     
     # PULL FORCE/POTENTIAL ENERGY FOR ENERGY OF STEP ***
     # fx(r) = -dU(r)/dx        (partial derivative)
     # fx(r) = -(x/r)(dU(r)/dr) (partial derivative)
     
-    return force
+    return force, potential
     
 # --------------------------------------
 # UPDATES VELOCITIES/ACC USING VELOCITY VERLET
 # -------------------------------------
-def update_vel (p_no, d_no, coords, vel, force, acc, dt):
+def update_vel (p_no, d_no, coords, vel, force, acc, dt, step):
     if step < 2:
-        print("BEGINNING UPDATE_VEL")    
+        print("BEGINNING UPDATE_VELOCITIES")    
     
     # UPDATE VELOCITIES - VELOCITY VERLET TAYLOR SERIES EXPANSION FOR VELOCITIES
     # v(t+dt) = v(t) + (force(t) + force(t+dt)) * 1/2 * 1/mass * dt 
     for i in range(0, d_no):
         for j in range(0, p_no):
-            rmass = 1/coords[5][j]
-            vel[i,j] = vel[i,j] + 0.5 * dt * (f[i,j] * rmass + acc[i,j])
+            rmass = 1/float(coords[4][j])
+            vel[i,j] = vel[i,j] + 0.5 * dt * (force[i,j] * rmass + acc[i,j])
     
     # UPDATE ACCELERATIONS
     for i in range(0, d_no):
         for j in range(0, p_no):
-            rmass = 1/coords[5][j]
+            rmass = 1/float(coords[4][j])
             # f = ma
-            acc[i,j] = f[i,j] * rmass
+            acc[i,j] = force[i,j] * rmass
             
-    
             
     # COMPUTE KINETIC ENERGY
     # USED TO FIND TOTAL ENERGY (+ POTENTIAL) AND FIND % ERROR IN CALC
     kinetic = 0.0
     for k in range(0, d_no):
         for j in range(0, p_no):
-            # COORDS[5] = ATOMIC MASSES
+            # COORDS[4] = ATOMIC MASSES
             # 1/2 * m * v^2
-            kinetic = kinetic + 0.5 * coords[5][j] * vel[k,j] ** 2
+            kinetic = kinetic + 0.5 * float(coords[4][j]) * vel[k,j] ** 2
 
     return vel, acc, kinetic
 
@@ -205,7 +209,7 @@ def md_test ():
     from read_gms import xyz
     from time import clock 
     t_stamp()
-    # COORDS: LIST OF LISTS; SYMBOL, CHARGE, X, Y, Z, MASS 
+    # COORDS: LIST OF LISTS; X, Y, Z, SYMBOL, CHARGE, MASS
     coords = xyz()
     s_no = 100
     dt   = 0.1
