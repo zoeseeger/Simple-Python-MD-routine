@@ -7,6 +7,10 @@ def xyz():
     import numpy as np
     
     # USE "script.py filename.inp"
+    if len(sys.argv) > 1:
+        file = sys.argv[1]
+    else:
+        print("No file name given with script, will terminate.")
     #file = sys.argv[1]
     file = "c1mim-cl-p10.inp"
     
@@ -15,6 +19,7 @@ def xyz():
     coords      = []
     # COORDS IS LIST OF LISTS; [ATM SYMBOL, ATOMIC NUMBER, X, Y, Z, APPEND MASS]
     with open(file, 'r+') as f:
+        orininal_f = f.readlines()
         for line in f:
             if re.search('END', line):
                 save_coords = False
@@ -39,6 +44,6 @@ def xyz():
         # APPEND MOLAR MASS
         coords[5].append(eval(symbol).mass)
 
-    return coords
+    return orininal_f, coords
 
 
