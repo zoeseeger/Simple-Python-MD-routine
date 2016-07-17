@@ -61,6 +61,9 @@ def md (coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
 
             # EMPTY ACCELERATIONS
             acc = np.zeros([d_no, p_no])
+            
+            # TO STORE MD SIMS
+            os.mkdir("gamess_sub")
 
         # UPDATE POSITION USING update_pos()
         coords = update_pos (p_no, d_no, coords, vel, force, acc, dt)
@@ -108,7 +111,7 @@ def update_pos (p_no, d_no, coords, vel, acc, dt):
 # -------------------------------------
 # FUNCTION COMPUTES FORCES AND ENERGIES
 # -------------------------------------
-def compute (p_no, d_no, coords, vel, dt):
+def compute (p_no, d_no, coords, vel, dt, step):
     import numpy as np
     from math import sin, sqrt
     
@@ -118,7 +121,16 @@ def compute (p_no, d_no, coords, vel, dt):
     # ZERO MATRICES
     force  = np.zeros([d_no, p_no])
 
-    # NEED TO CALL FUNCTION TO SUBMIT SPEC ***
+    # SUBMIT SPEC 
+    os.mkdir("step_" + step)
+    lines_job = [""]
+    lines_inp = [""]
+    with open("gamess_sub/step_" + step + "/.inp", 'w+') as f:
+        f.writelines(lines_inp)
+    with open("gamess_sub/step_" + step + "/.job", 'w+') as f:
+        f.writeline(lines_job)
+    
+    
     
     # READ IN FORCE DATA TO USE AS POTENTIAL ***
     
