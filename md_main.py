@@ -6,7 +6,7 @@
 # --------------------------
 # PRODUCES ENERGIES AND PRINTS
 # --------------------------
-def md (coords, s_no, dt, temp, original_f): # DEFAULT VALUES
+def md (coords, s_no, dt, temp, name, original_f): # DEFAULT VALUES
     import numpy as np
     import math
     import os
@@ -122,15 +122,14 @@ def compute (p_no, d_no, coords, vel, dt, step, original_f):
     import numpy as np
     import os
     import re
+    import subprocess
 
     if step < 2:
         print('BEGINNING COMPUTE')
 
-    # ZERO MATRICES
-    force  = np.zeros([d_no, p_no])
-
     # SUBMIT SPEC
-    os.mkdir("gamess_sub/step_" + str(step))
+    folder = "gamess_sub/step_" + str(step)
+    os.mkdir(folder)
 
     # SAVE ALL TEXT EXCEPT COORDS IN xyz
     save_coords = True
@@ -152,7 +151,7 @@ def compute (p_no, d_no, coords, vel, dt, step, original_f):
             ut[j].append(float(coords[i][j]))
     print(ut)
 
-    lines_job = [
+    lines_job = [ # CHANGE FROM water ****
                  "#!/bin/bash"                   ,
                  "#PBS -P k96 "                  ,
                  "#PBS -l walltime=4:00:00"      ,
@@ -165,18 +164,42 @@ def compute (p_no, d_no, coords, vel, dt, step, original_f):
                  "module load openmpi/1.8.4"     ,
                  "/short/k96/apps/gamess/rungms.rika water.inp $PBS_NCPUS 01 > water.log"
                                                   ]
-
-    with open("gamess_sub/step_" + str(step) + "/.inp", 'w+') as f:
+    
+    with open(folder + "/" + name + ".inp", 'w+') as f:
         f.writelines(inp)
         for line in ut:
             for val in line:
                 f.write(" " + str(val) + "\t")
             f.write("\n")
         f.write(" $END")
-    with open("gamess_sub/step_" + str(step) + "/.job", 'w+') as f:
+    with open(folder + "/" + name + ".job", 'w+') as f:
         f.writelines(lines_job)
 
-
+    # STARTS CHILD PROCESS AND WAITS FOR COMPLETION (CALL)
+    subprocess.call("qsub " + folder + "/" + name + ".job", shell = True) 
+    
+    # FIND FORCES IN LOG, KEEP LAST SET
+    with open(folder + "/" + name + ".log", 'r') as f:
+        save_force = False
+        for line in f:
+            if line == '\n':
+                save_force = False
+            elif re.search("\s*ATOM\s*ZNUC\s*DE/DX\s*DE/DY\s*DE/DZ")
+                force      = np.zeros([d_no, p_no])
+                force_s    = []
+                save_force = True
+            if save_force:
+                forces_s.append(line):
+    force_s = forces_s[2:]
+    # PUT FORCE MATRIX INTO NUMPY
+    for i, line in enumerate(force_s):
+        line         = line.split()
+        force[i-1,0] = line[3] 
+        force[i-1,1] = line[4] 
+        force[i-1,2] = line[5]
+        
+    # ANTIDERIVE FORCE FOR ENERGY TO CHECK AGAINST E0
+    
     # READ IN FORCE DATA TO USE AS POTENTIAL ***
     potential = 0
 
@@ -236,13 +259,13 @@ def md_test ():
     from time import clock
     t_stamp()
     # COORDS: LIST OF LISTS; X, Y, Z, SYMBOL, CHARGE, MASS
-    original_f, coords = xyz()
+    original_f, coords = xyz() # NEED TO EDIT xyz TO GET NAME TO PASS TO md() ***
     s_no = 100
     dt   = 0.1
     temp = 300
     wtime1 = clock()
     # THE MD SIMULATION
-    md(coords,  s_no, dt, temp, original_f)
+    md(coords,  s_no, dt, temp, name, original_f) 
     wtime2 = clock()
     print('Simulation human time = ', wtime2 - wtime1)
     # TERMINATION
