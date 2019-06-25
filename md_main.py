@@ -1,6 +1,4 @@
-#!/short/k96/zls565/installations/bin/python3
-# USING PYTHON/3.4.3
-# SEE: https://people.sc.fsu.edu/~jburkardt/py_src/md/md.py
+# See reference: https://people.sc.fsu.edu/~jburkardt/py_src/md/md.py
 
 # --------------------------
 # PRODUCES ENERGIES AND PRINTS
@@ -16,7 +14,6 @@ def md (original_f, coords, s_no = 500, dt = 0.1, temp = 300): # DEFAULT VALUES
     # STARTING PARAMS
     print('')
     print('     Molecular Dynamics Simulator'                           )
-#    print('     Written by Zoe Seeger, 2016'                            )
     print('     This programme is using Python version ' + sys[0]        )
     print('     With: '                                                 )
     print('         Spatial dimension   : ' , d_no                      )
@@ -184,14 +181,3 @@ def md_test ():
     t_stamp()
 
 md_test()
-
-
-
-
-
-                
-
-
-
-    
-
